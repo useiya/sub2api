@@ -3613,14 +3613,10 @@ func (s *adminServiceImpl) ForceOpenAIPrivacy(ctx context.Context, account *Acco
 		return ""
 	}
 
-	if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{"privacy_mode": mode}); err != nil {
+	if err := s.recordPrivacyMode(ctx, account, mode); err != nil {
 		logger.LegacyPrintf("service.admin", "force_update_openai_privacy_mode_failed: account_id=%d err=%v", account.ID, err)
 		return mode
 	}
-	if account.Extra == nil {
-		account.Extra = make(map[string]any)
-	}
-	account.Extra["privacy_mode"] = mode
 	return mode
 }
 
@@ -3656,11 +3652,10 @@ func (s *adminServiceImpl) EnsureAntigravityPrivacy(ctx context.Context, account
 		return ""
 	}
 
-	if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{"privacy_mode": mode}); err != nil {
+	if err := s.recordPrivacyMode(ctx, account, mode); err != nil {
 		logger.LegacyPrintf("service.admin", "update_antigravity_privacy_mode_failed: account_id=%d err=%v", account.ID, err)
 		return mode
 	}
-	applyAntigravityPrivacyMode(account, mode)
 	return mode
 }
 
@@ -3689,10 +3684,57 @@ func (s *adminServiceImpl) ForceAntigravityPrivacy(ctx context.Context, account 
 		return ""
 	}
 
-	if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{"privacy_mode": mode}); err != nil {
+	if err := s.recordPrivacyMode(ctx, account, mode); err != nil {
 		logger.LegacyPrintf("service.admin", "force_update_antigravity_privacy_mode_failed: account_id=%d err=%v", account.ID, err)
 		return mode
 	}
-	applyAntigravityPrivacyMode(account, mode)
 	return mode
+}
+
+func (s *adminServiceImpl) recordPrivacyMode(ctx context.Context, account *Account, mode string) error {
+	if account == nil || strings.TrimSpace(mode) == "" {
+		return nil
+	}
+	if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{"privacy_mode": mode}); err != nil {
+		return err
+	}
+	if account.Extra == nil {
+		account.Extra = make(map[string]any)
+	}
+	account.Extra["privacy_mode"] = mode
+	s.clearPrivacyRequiredError(ctx, account, mode)
+	return nil
+}
+
+func (s *adminServiceImpl) clearPrivacyRequiredError(ctx context.Context, account *Account, mode string) {
+	if !isSuccessfulPrivacyMode(account, mode) || !isPrivacyRequiredError(account) {
+		return
+	}
+	if err := s.accountRepo.ClearError(ctx, account.ID); err != nil {
+		logger.LegacyPrintf("service.admin", "clear_privacy_required_error_failed: account_id=%d err=%v", account.ID, err)
+		return
+	}
+	account.Status = StatusActive
+	account.ErrorMessage = ""
+}
+
+func isSuccessfulPrivacyMode(account *Account, mode string) bool {
+	if account == nil {
+		return false
+	}
+	switch account.Platform {
+	case PlatformOpenAI:
+		return mode == PrivacyModeTrainingOff
+	case PlatformAntigravity:
+		return mode == AntigravityPrivacySet
+	default:
+		return false
+	}
+}
+
+func isPrivacyRequiredError(account *Account) bool {
+	if account == nil || account.Status != StatusError {
+		return false
+	}
+	return strings.HasPrefix(account.ErrorMessage, "Privacy not set, required by group [")
 }
