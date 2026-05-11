@@ -29,13 +29,13 @@ func NewChannelMonitorUserHandler(
 	}
 }
 
-// featureEnabled 返回当前渠道监控功能是否开启。
+// featureEnabled 返回当前渠道监控用户入口是否可见。
 // settingService 为 nil（测试场景）视为启用。
 func (h *ChannelMonitorUserHandler) featureEnabled(c *gin.Context) bool {
 	if h.settingService == nil {
 		return true
 	}
-	return h.settingService.GetChannelMonitorRuntime(c.Request.Context()).Enabled
+	return h.settingService.GetChannelMonitorVisibilityRuntime(c.Request.Context()).UserVisible
 }
 
 // --- Response ---

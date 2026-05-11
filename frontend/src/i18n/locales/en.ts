@@ -73,7 +73,7 @@ export default {
           us: 'Switch between models freely'
         },
         management: {
-          feature: 'Account Management',
+          feature: 'Upstream Management',
           official: 'Manage each service separately',
           us: 'Unified key, one dashboard'
         },
@@ -357,7 +357,7 @@ export default {
     channels: 'Channels',
     availableChannels: 'Available Channels',
     subscriptions: 'Subscriptions',
-    accounts: 'Accounts',
+    accounts: 'Upstream',
     proxies: 'Proxies',
     redeemCodes: 'Redeem Codes',
     ops: 'Ops',
@@ -2791,8 +2791,8 @@ export default {
 
     // Accounts
     accounts: {
-      title: 'Account Management',
-      description: 'Manage AI platform accounts and credentials',
+      title: 'Upstream Management',
+      description: 'Manage upstream AI platform accounts and credentials',
       createAccount: 'Create Account',
       autoRefresh: 'Auto Refresh',
       enableAutoRefresh: 'Enable auto refresh',
@@ -5129,10 +5129,12 @@ export default {
       features: {
         channelMonitor: {
           title: 'Channel Monitor',
-          description: 'Periodically probe configured channels and surface availability / latency to users. Turning it off stops the scheduler and returns an empty list on the user page.',
+          description: 'Periodically probes configured channels. Background checks continue while either the admin or user entry is visible; when both are hidden, checks stop and history is preserved.',
           configureLink: 'Configure monitors in Channel Management > Channel Monitor',
-          enabled: 'Enable Channel Monitor',
-          enabledHint: 'Disabling stops background checks; existing history is preserved.',
+          adminVisible: 'Visible to admins',
+          adminVisibleHint: 'Controls whether Channel Management > Channel Monitor appears in the admin sidebar.',
+          userVisible: 'Visible to users',
+          userVisibleHint: 'Controls whether the user Channel Status entry and read-only user endpoints are available.',
           defaultInterval: 'Default check interval (seconds)',
           defaultIntervalHint: 'Pre-fills the interval when creating a new monitor; each monitor can override it. Range 15 – 3600.',
         },
@@ -6324,7 +6326,7 @@ export default {
       },
       accountManage: {
         title: '🔗 Step 2: Add Account',
-        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>Great! Group created successfully 🎉</b></p><p style="margin-bottom: 12px;">Now add upstream AI service accounts to enable actual service delivery.</p><div style="padding: 8px 12px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>🔑 Account Purpose:</b><ul style="margin: 8px 0 0 16px;"><li>Connect to upstream AI services (Claude, GPT, etc.)</li><li>One group can contain multiple accounts (load balancing)</li><li>Supports OAuth and Session Key methods</li></ul></div><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Account Management" on the left sidebar</p></div>'
+        description: '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>Great! Group created successfully 🎉</b></p><p style="margin-bottom: 12px;">Now add upstream AI service accounts to enable actual service delivery.</p><div style="padding: 8px 12px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>🔑 Account Purpose:</b><ul style="margin: 8px 0 0 16px;"><li>Connect to upstream AI services (Claude, GPT, etc.)</li><li>One group can contain multiple accounts (load balancing)</li><li>Supports OAuth and Session Key methods</li></ul></div><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 Click "Upstream Management" on the left sidebar</p></div>'
       },
       createAccount: {
         title: '➕ Add New Account',
@@ -6460,6 +6462,11 @@ export default {
       scanWxpayHint: 'Open WeChat on your phone and scan the QR code to pay',
       payInNewWindow: 'Complete Payment in New Window',
       payInNewWindowHint: 'The payment page has opened in a new window. Please complete the payment there and return to this page.',
+      confirmAfterPaymentHint: 'After completing payment, choose the result that matches your situation.',
+      paymentSucceeded: 'Payment Succeeded',
+      paymentFailed: 'Payment Failed',
+      verifyingPayment: 'Verifying...',
+      paymentNotConfirmed: 'Payment has not been confirmed yet. Please try again shortly.',
       openPayWindow: 'Reopen Payment Page',
       expiresIn: 'Expires in',
       expired: 'Order Expired',

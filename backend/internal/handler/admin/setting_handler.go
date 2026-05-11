@@ -257,7 +257,9 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		PaymentCancelRateLimitUnit:             paymentCfg.CancelRateLimitUnit,
 		PaymentCancelRateLimitMode:             paymentCfg.CancelRateLimitMode,
 
-		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
+		ChannelMonitorEnabled:                settings.ChannelMonitorAdminVisible || settings.ChannelMonitorUserVisible,
+		ChannelMonitorAdminVisible:           settings.ChannelMonitorAdminVisible,
+		ChannelMonitorUserVisible:            settings.ChannelMonitorUserVisible,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
@@ -558,6 +560,8 @@ type UpdateSettingsRequest struct {
 
 	// Channel Monitor feature switch
 	ChannelMonitorEnabled                *bool `json:"channel_monitor_enabled"`
+	ChannelMonitorAdminVisible           *bool `json:"channel_monitor_admin_visible"`
+	ChannelMonitorUserVisible            *bool `json:"channel_monitor_user_visible"`
 	ChannelMonitorDefaultIntervalSeconds *int  `json:"channel_monitor_default_interval_seconds"`
 
 	// Available Channels feature switch (user-facing)
@@ -1475,11 +1479,23 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.AccountQuotaNotifyEmails
 		}(),
-		ChannelMonitorEnabled: func() bool {
+		ChannelMonitorAdminVisible: func() bool {
+			if req.ChannelMonitorAdminVisible != nil {
+				return *req.ChannelMonitorAdminVisible
+			}
 			if req.ChannelMonitorEnabled != nil {
 				return *req.ChannelMonitorEnabled
 			}
-			return previousSettings.ChannelMonitorEnabled
+			return previousSettings.ChannelMonitorAdminVisible
+		}(),
+		ChannelMonitorUserVisible: func() bool {
+			if req.ChannelMonitorUserVisible != nil {
+				return *req.ChannelMonitorUserVisible
+			}
+			if req.ChannelMonitorEnabled != nil {
+				return *req.ChannelMonitorEnabled
+			}
+			return previousSettings.ChannelMonitorUserVisible
 		}(),
 		ChannelMonitorDefaultIntervalSeconds: func() int {
 			if req.ChannelMonitorDefaultIntervalSeconds != nil {
@@ -1506,6 +1522,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			return previousSettings.RiskControlEnabled
 		}(),
 	}
+	settings.ChannelMonitorEnabled = settings.ChannelMonitorAdminVisible || settings.ChannelMonitorUserVisible
 
 	authSourceDefaults := &service.AuthSourceDefaultSettings{
 		Email: service.ProviderDefaultGrantSettings{
@@ -1778,7 +1795,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PaymentCancelRateLimitUnit:             updatedPaymentCfg.CancelRateLimitUnit,
 		PaymentCancelRateLimitMode:             updatedPaymentCfg.CancelRateLimitMode,
 
-		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorEnabled,
+		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorAdminVisible || updatedSettings.ChannelMonitorUserVisible,
+		ChannelMonitorAdminVisible:           updatedSettings.ChannelMonitorAdminVisible,
+		ChannelMonitorUserVisible:            updatedSettings.ChannelMonitorUserVisible,
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
@@ -2176,6 +2195,12 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	}
 	if before.ChannelMonitorEnabled != after.ChannelMonitorEnabled {
 		changed = append(changed, "channel_monitor_enabled")
+	}
+	if before.ChannelMonitorAdminVisible != after.ChannelMonitorAdminVisible {
+		changed = append(changed, "channel_monitor_admin_visible")
+	}
+	if before.ChannelMonitorUserVisible != after.ChannelMonitorUserVisible {
+		changed = append(changed, "channel_monitor_user_visible")
 	}
 	if before.ChannelMonitorDefaultIntervalSeconds != after.ChannelMonitorDefaultIntervalSeconds {
 		changed = append(changed, "channel_monitor_default_interval_seconds")

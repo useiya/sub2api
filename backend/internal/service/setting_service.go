@@ -623,6 +623,8 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyBalanceLowNotifyRechargeURL,
 		SettingKeyAccountQuotaNotifyEnabled,
 		SettingKeyChannelMonitorEnabled,
+		SettingKeyChannelMonitorAdminVisible,
+		SettingKeyChannelMonitorUserVisible,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
 		SettingKeyAvailableChannelsEnabled,
 		SettingKeyAffiliateEnabled,
@@ -678,6 +680,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		balanceLowNotifyThreshold = v
 	}
 
+	channelMonitorVisibility := channelMonitorVisibilityFromSettings(settings)
 	return &PublicSettings{
 		RegistrationEnabled:              settings[SettingKeyRegistrationEnabled] == "true",
 		EmailVerifyEnabled:               emailVerifyEnabled,
@@ -724,7 +727,9 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		BalanceLowNotifyThreshold:        balanceLowNotifyThreshold,
 		BalanceLowNotifyRechargeURL:      settings[SettingKeyBalanceLowNotifyRechargeURL],
 
-		ChannelMonitorEnabled:                !isFalseSettingValue(settings[SettingKeyChannelMonitorEnabled]),
+		ChannelMonitorEnabled:                channelMonitorVisibility.AdminVisible || channelMonitorVisibility.UserVisible,
+		ChannelMonitorAdminVisible:           channelMonitorVisibility.AdminVisible,
+		ChannelMonitorUserVisible:            channelMonitorVisibility.UserVisible,
 		ChannelMonitorDefaultIntervalSeconds: parseChannelMonitorInterval(settings[SettingKeyChannelMonitorDefaultIntervalSeconds]),
 
 		AvailableChannelsEnabled: settings[SettingKeyAvailableChannelsEnabled] == "true",
@@ -774,19 +779,60 @@ type ChannelMonitorRuntime struct {
 	DefaultIntervalSeconds int
 }
 
+type ChannelMonitorVisibilityRuntime struct {
+	AdminVisible bool
+	UserVisible  bool
+}
+
 // GetChannelMonitorRuntime reads the channel monitor feature flags directly from
 // the settings store. Fail-open: on error returns Enabled=true with the default interval.
 func (s *SettingService) GetChannelMonitorRuntime(ctx context.Context) ChannelMonitorRuntime {
 	vals, err := s.settingRepo.GetMultiple(ctx, []string{
 		SettingKeyChannelMonitorEnabled,
+		SettingKeyChannelMonitorAdminVisible,
+		SettingKeyChannelMonitorUserVisible,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
 	})
 	if err != nil {
 		return ChannelMonitorRuntime{Enabled: true, DefaultIntervalSeconds: channelMonitorIntervalFallback}
 	}
+	visibility := channelMonitorVisibilityFromSettings(vals)
 	return ChannelMonitorRuntime{
-		Enabled:                !isFalseSettingValue(vals[SettingKeyChannelMonitorEnabled]),
+		Enabled:                visibility.AdminVisible || visibility.UserVisible,
 		DefaultIntervalSeconds: parseChannelMonitorInterval(vals[SettingKeyChannelMonitorDefaultIntervalSeconds]),
+	}
+}
+
+func (s *SettingService) GetChannelMonitorVisibilityRuntime(ctx context.Context) ChannelMonitorVisibilityRuntime {
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyChannelMonitorEnabled,
+		SettingKeyChannelMonitorAdminVisible,
+		SettingKeyChannelMonitorUserVisible,
+	})
+	if err != nil {
+		return ChannelMonitorVisibilityRuntime{AdminVisible: true, UserVisible: true}
+	}
+	return channelMonitorVisibilityFromSettings(vals)
+}
+
+func channelMonitorVisibilityFromSettings(vals map[string]string) ChannelMonitorVisibilityRuntime {
+	legacyEnabled := !isFalseSettingValue(vals[SettingKeyChannelMonitorEnabled])
+	adminRaw, adminOK := vals[SettingKeyChannelMonitorAdminVisible]
+	userRaw, userOK := vals[SettingKeyChannelMonitorUserVisible]
+	if !adminOK && !userOK {
+		return ChannelMonitorVisibilityRuntime{AdminVisible: legacyEnabled, UserVisible: legacyEnabled}
+	}
+	adminVisible := true
+	if adminOK {
+		adminVisible = !isFalseSettingValue(adminRaw)
+	}
+	userVisible := true
+	if userOK {
+		userVisible = !isFalseSettingValue(userRaw)
+	}
+	return ChannelMonitorVisibilityRuntime{
+		AdminVisible: adminVisible,
+		UserVisible:  userVisible,
 	}
 }
 
@@ -883,6 +929,8 @@ type PublicSettingsInjectionPayload struct {
 	// frontend/src/utils/featureFlags.ts. Missing a field here is the bug
 	// that hid the "可用渠道" menu on page refresh.
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
+	ChannelMonitorAdminVisible           bool `json:"channel_monitor_admin_visible"`
+	ChannelMonitorUserVisible            bool `json:"channel_monitor_user_visible"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 	AvailableChannelsEnabled             bool `json:"available_channels_enabled"`
 	AffiliateEnabled                     bool `json:"affiliate_enabled"`
@@ -944,6 +992,8 @@ func (s *SettingService) GetPublicSettingsForInjection(ctx context.Context) (any
 		BalanceLowNotifyRechargeURL:      settings.BalanceLowNotifyRechargeURL,
 
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
+		ChannelMonitorAdminVisible:           settings.ChannelMonitorAdminVisible,
+		ChannelMonitorUserVisible:            settings.ChannelMonitorUserVisible,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 		AvailableChannelsEnabled:             settings.AvailableChannelsEnabled,
 		AffiliateEnabled:                     settings.AffiliateEnabled,
@@ -1554,8 +1604,11 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 		updates[SettingKeyOpsMetricsIntervalSeconds] = strconv.Itoa(settings.OpsMetricsIntervalSeconds)
 	}
 
-	// Channel monitor feature switch
-	updates[SettingKeyChannelMonitorEnabled] = strconv.FormatBool(settings.ChannelMonitorEnabled)
+	// Channel monitor visibility switches. The legacy enabled key is derived so the runner
+	// stops only when both admin and user entries are hidden.
+	updates[SettingKeyChannelMonitorAdminVisible] = strconv.FormatBool(settings.ChannelMonitorAdminVisible)
+	updates[SettingKeyChannelMonitorUserVisible] = strconv.FormatBool(settings.ChannelMonitorUserVisible)
+	updates[SettingKeyChannelMonitorEnabled] = strconv.FormatBool(settings.ChannelMonitorAdminVisible || settings.ChannelMonitorUserVisible)
 	if v := clampChannelMonitorInterval(settings.ChannelMonitorDefaultIntervalSeconds); v > 0 {
 		updates[SettingKeyChannelMonitorDefaultIntervalSeconds] = strconv.Itoa(v)
 	}
@@ -2338,8 +2391,10 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyOpsQueryModeDefault:          "auto",
 		SettingKeyOpsMetricsIntervalSeconds:    "60",
 
-		// Channel monitor defaults (enabled, 60s)
+		// Channel monitor defaults (visible for admin/user, 60s)
 		SettingKeyChannelMonitorEnabled:                "true",
+		SettingKeyChannelMonitorAdminVisible:           "true",
+		SettingKeyChannelMonitorUserVisible:            "true",
 		SettingKeyChannelMonitorDefaultIntervalSeconds: "60",
 
 		// Available channels feature (default disabled; opt-in)
@@ -2703,8 +2758,11 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		}
 	}
 
-	// Channel monitor feature (default: enabled, 60s)
-	result.ChannelMonitorEnabled = !isFalseSettingValue(settings[SettingKeyChannelMonitorEnabled])
+	// Channel monitor feature (default: visible for admin/user, 60s)
+	channelMonitorVisibility := channelMonitorVisibilityFromSettings(settings)
+	result.ChannelMonitorAdminVisible = channelMonitorVisibility.AdminVisible
+	result.ChannelMonitorUserVisible = channelMonitorVisibility.UserVisible
+	result.ChannelMonitorEnabled = channelMonitorVisibility.AdminVisible || channelMonitorVisibility.UserVisible
 	result.ChannelMonitorDefaultIntervalSeconds = parseChannelMonitorInterval(
 		settings[SettingKeyChannelMonitorDefaultIntervalSeconds],
 	)

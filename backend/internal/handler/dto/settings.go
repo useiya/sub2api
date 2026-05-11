@@ -208,6 +208,8 @@ type SystemSettings struct {
 
 	// Channel Monitor feature switch
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
+	ChannelMonitorAdminVisible           bool `json:"channel_monitor_admin_visible"`
+	ChannelMonitorUserVisible            bool `json:"channel_monitor_user_visible"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 
 	// Available Channels feature switch (user-facing aggregate view)
@@ -277,6 +279,8 @@ type PublicSettings struct {
 	BalanceLowNotifyRechargeURL      string                   `json:"balance_low_notify_recharge_url"`
 
 	ChannelMonitorEnabled                bool `json:"channel_monitor_enabled"`
+	ChannelMonitorAdminVisible           bool `json:"channel_monitor_admin_visible"`
+	ChannelMonitorUserVisible            bool `json:"channel_monitor_user_visible"`
 	ChannelMonitorDefaultIntervalSeconds int  `json:"channel_monitor_default_interval_seconds"`
 
 	AvailableChannelsEnabled bool `json:"available_channels_enabled"`

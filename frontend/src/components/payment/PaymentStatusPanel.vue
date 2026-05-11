@@ -102,10 +102,23 @@
     <!-- Waiting for Popup/Redirect Mode -->
     <template v-else>
       <div class="card p-6">
-        <div class="flex flex-col items-center space-y-4 py-4">
-          <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"></div>
-          <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('payment.qr.payInNewWindowHint') }}</p>
-          <button v-if="payUrl" class="btn btn-secondary text-sm" @click="reopenPopup">
+        <div class="flex flex-col items-center space-y-5 py-4 text-center">
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <Icon name="infoCircle" size="lg" class="text-blue-600 dark:text-blue-400" />
+          </div>
+          <div class="space-y-2">
+            <p class="text-lg font-bold text-gray-900 dark:text-white">{{ t('payment.qr.payInNewWindow') }}</p>
+            <p class="text-sm leading-6 text-gray-500 dark:text-gray-400">{{ t('payment.qr.confirmAfterPaymentHint') }}</p>
+          </div>
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <button class="btn btn-primary" :disabled="verifyingPayment" @click="handlePopupPaymentSuccess">
+              {{ verifyingPayment ? t('payment.qr.verifyingPayment') : t('payment.qr.paymentSucceeded') }}
+            </button>
+            <button class="btn btn-secondary" :disabled="verifyingPayment" @click="handlePopupPaymentFailed">
+              {{ t('payment.qr.paymentFailed') }}
+            </button>
+          </div>
+          <button v-if="payUrl" class="text-sm font-medium text-primary-600 transition-colors hover:text-primary-500 dark:text-primary-400" @click="reopenPopup">
             {{ t('payment.qr.openPayWindow') }}
           </button>
         </div>
@@ -141,6 +154,7 @@ const props = defineProps<{
   expiresAt: string
   paymentType: string
   payUrl?: string
+  outTradeNo?: string
   orderType?: string
 }>()
 
@@ -156,6 +170,7 @@ const qrCanvas = ref<HTMLCanvasElement | null>(null)
 const qrUrl = ref('')
 const remainingSeconds = ref(0)
 const cancelling = ref(false)
+const verifyingPayment = ref(false)
 const paidOrder = ref<PaymentOrder | null>(null)
 
 // Terminal outcome: null = still active, 'success' | 'cancelled' | 'expired'
@@ -241,6 +256,42 @@ async function pollStatus() {
     cleanup()
     setOutcome('expired')
   }
+}
+
+async function confirmPaymentByOrder(): Promise<PaymentOrder | null> {
+  const outTradeNo = props.outTradeNo?.trim()
+  if (outTradeNo) {
+    const response = await paymentAPI.verifyOrder(outTradeNo)
+    return response.data
+  }
+  if (!props.orderId) return null
+  return paymentStore.pollOrderStatus(props.orderId)
+}
+
+async function handlePopupPaymentSuccess() {
+  if (verifyingPayment.value || outcome.value) return
+  verifyingPayment.value = true
+  try {
+    const order = await confirmPaymentByOrder()
+    if (order && isSuccessStatus(order.status)) {
+      cleanup()
+      paidOrder.value = order
+      setOutcome('success')
+      emit('success')
+      return
+    }
+    appStore.showError(t('payment.qr.paymentNotConfirmed'))
+  } catch (err: unknown) {
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('payment.qr.paymentNotConfirmed')))
+  } finally {
+    verifyingPayment.value = false
+  }
+}
+
+function handlePopupPaymentFailed() {
+  if (verifyingPayment.value || outcome.value) return
+  cleanup()
+  setOutcome('cancelled')
 }
 
 function startCountdown(seconds: number) {

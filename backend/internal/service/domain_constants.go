@@ -295,9 +295,15 @@ const (
 	// Channel Monitor (渠道监控)
 	// =========================
 
-	// SettingKeyChannelMonitorEnabled is a DB-backed soft switch for the channel monitor feature.
-	// When false: runner skips scheduling and user-facing endpoints return an empty list.
+	// SettingKeyChannelMonitorEnabled is derived from admin/user visibility for backward compatibility.
+	// When false: runner skips scheduling. Admin/user visibility are controlled by dedicated keys below.
 	SettingKeyChannelMonitorEnabled = "channel_monitor_enabled"
+
+	// SettingKeyChannelMonitorAdminVisible controls the admin sidebar entry for channel monitor.
+	SettingKeyChannelMonitorAdminVisible = "channel_monitor_admin_visible"
+
+	// SettingKeyChannelMonitorUserVisible controls the user sidebar entry and user-facing endpoints.
+	SettingKeyChannelMonitorUserVisible = "channel_monitor_user_visible"
 
 	// SettingKeyChannelMonitorDefaultIntervalSeconds controls the default interval (seconds)
 	// pre-filled when creating a new channel monitor from the admin UI. Range: [15, 3600].

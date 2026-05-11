@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 const pollOrderStatus = vi.hoisted(() => vi.fn())
 const cancelOrder = vi.hoisted(() => vi.fn())
+const verifyOrder = vi.hoisted(() => vi.fn())
 const showError = vi.hoisted(() => vi.fn())
 const toCanvas = vi.hoisted(() => vi.fn())
 
@@ -31,6 +32,7 @@ vi.mock('@/stores', () => ({
 vi.mock('@/api/payment', () => ({
   paymentAPI: {
     cancelOrder,
+    verifyOrder,
   },
 }))
 
@@ -62,6 +64,7 @@ describe('PaymentStatusPanel', () => {
     vi.useFakeTimers()
     pollOrderStatus.mockReset()
     cancelOrder.mockReset()
+    verifyOrder.mockReset()
     showError.mockReset()
     toCanvas.mockReset().mockResolvedValue(undefined)
   })
@@ -127,5 +130,76 @@ describe('PaymentStatusPanel', () => {
     )
 
     openSpy.mockRestore()
+  })
+
+  it('verifies popup payment manually and emits success when upstream confirms it', async () => {
+    const paidOrder = orderFactory('PAID')
+    verifyOrder.mockResolvedValue({ data: paidOrder })
+
+    const wrapper = mount(PaymentStatusPanel, {
+      props: {
+        orderId: 42,
+        qrCode: '',
+        payUrl: 'https://pay.example.com/session/42',
+        outTradeNo: 'sub2_20260420abcd1234',
+        expiresAt: '2099-01-01T12:30:00Z',
+        paymentType: 'alipay',
+        orderType: 'balance',
+      },
+      global: {
+        stubs: {
+          Icon: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('payment.qr.payInNewWindow')
+    expect(wrapper.text()).toContain('payment.qr.paymentSucceeded')
+
+    const successButton = wrapper
+      .findAll('button')
+      .find(button => button.text() === 'payment.qr.paymentSucceeded')
+    expect(successButton).toBeTruthy()
+    await successButton!.trigger('click')
+    await flushPromises()
+
+    expect(verifyOrder).toHaveBeenCalledWith('sub2_20260420abcd1234')
+    expect(wrapper.text()).toContain('payment.result.success')
+    expect(wrapper.emitted('success')).toHaveLength(1)
+  })
+
+  it('keeps popup payment active when manual verification is still pending upstream', async () => {
+    verifyOrder.mockResolvedValue({ data: orderFactory('PENDING') })
+
+    const wrapper = mount(PaymentStatusPanel, {
+      props: {
+        orderId: 42,
+        qrCode: '',
+        payUrl: 'https://pay.example.com/session/42',
+        outTradeNo: 'sub2_20260420abcd1234',
+        expiresAt: '2099-01-01T12:30:00Z',
+        paymentType: 'alipay',
+        orderType: 'balance',
+      },
+      global: {
+        stubs: {
+          Icon: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    const successButton = wrapper
+      .findAll('button')
+      .find(button => button.text() === 'payment.qr.paymentSucceeded')
+    expect(successButton).toBeTruthy()
+    await successButton!.trigger('click')
+    await flushPromises()
+
+    expect(verifyOrder).toHaveBeenCalledWith('sub2_20260420abcd1234')
+    expect(showError).toHaveBeenCalledWith('payment.qr.paymentNotConfirmed')
+    expect(wrapper.text()).toContain('payment.qr.payInNewWindow')
+    expect(wrapper.emitted('success')).toBeUndefined()
   })
 })

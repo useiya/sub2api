@@ -152,16 +152,22 @@ watch(items, () => {
 })
 
 watch(
-  () => appStore.cachedPublicSettings?.channel_monitor_enabled,
-  (enabled) => {
-    if (enabled === false) autoRefresh.stop()
+  () => [
+    appStore.cachedPublicSettings?.channel_monitor_enabled,
+    appStore.cachedPublicSettings?.channel_monitor_user_visible,
+  ],
+  ([runtimeEnabled, userVisible]) => {
+    if (runtimeEnabled === false || userVisible === false) autoRefresh.stop()
     else if (autoRefresh.enabled.value) autoRefresh.start()
   },
 )
 
 onMounted(() => {
   void reload(false)
-  if (appStore.cachedPublicSettings?.channel_monitor_enabled !== false) {
+  if (
+    appStore.cachedPublicSettings?.channel_monitor_enabled !== false &&
+    appStore.cachedPublicSettings?.channel_monitor_user_visible !== false
+  ) {
     autoRefresh.setEnabled(true)
   }
 })

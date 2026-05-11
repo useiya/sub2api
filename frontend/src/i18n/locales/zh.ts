@@ -73,7 +73,7 @@ export default {
           us: '多模型随意切换'
         },
         management: {
-          feature: '账号管理',
+          feature: '上游管理',
           official: '每个服务单独管理',
           us: '统一密钥，一站管理'
         },
@@ -357,7 +357,7 @@ export default {
     channels: '渠道管理',
     availableChannels: '可用渠道',
     subscriptions: '订阅管理',
-    accounts: '账号管理',
+    accounts: '上游管理',
     proxies: 'IP管理',
     redeemCodes: '兑换码',
     ops: '运维监控',
@@ -2867,8 +2867,8 @@ export default {
 
     // Accounts Management
     accounts: {
-      title: '账号管理',
-      description: '管理 AI 平台账号和 Cookie',
+      title: '上游管理',
+      description: '管理上游 AI 平台账号和 Cookie',
       createAccount: '添加账号',
       autoRefresh: '自动刷新',
       enableAutoRefresh: '启用自动刷新',
@@ -5292,10 +5292,12 @@ export default {
       features: {
         channelMonitor: {
           title: '渠道监控',
-          description: '定期对配置的渠道发起健康检查，向用户展示可用性与延迟。关闭后调度器停止扫描，用户端列表为空。',
+          description: '定期对配置的渠道发起健康检查。管理员或用户入口任一可见时后台会继续检测，两者都关闭后停止检测，历史数据保留。',
           configureLink: '前往 渠道管理 > 渠道监控 配置监控项',
-          enabled: '启用渠道监控',
-          enabledHint: '关闭后后台不再执行定时检测，已有数据保留。',
+          adminVisible: '管理员可见',
+          adminVisibleHint: '控制管理后台“渠道管理 > 渠道监控”入口是否显示。',
+          userVisible: '用户可见',
+          userVisibleHint: '控制用户端“渠道状态”入口和用户只读接口是否可用。',
           defaultInterval: '默认检测间隔（秒）',
           defaultIntervalHint: '新建渠道监控时表单的默认值，可被单个渠道覆盖。范围 15 – 3600 秒。',
         },
@@ -6491,7 +6493,7 @@ export default {
       accountManage: {
         title: '🔗 第二步：添加账号',
         description:
-          '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>太棒了！分组已创建成功 🎉</b></p><p style="margin-bottom: 12px;">现在需要添加上游 AI 服务商的账号，让分组能够实际提供服务。</p><div style="padding: 8px 12px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>🔑 账号的作用：</b><ul style="margin: 8px 0 0 16px;"><li>连接到上游 AI 服务（Claude、GPT 等）</li><li>一个分组可以包含多个账号（负载均衡）</li><li>支持 OAuth 和 Session Key 两种方式</li></ul></div><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 点击左侧的"账号管理"</p></div>'
+          '<div style="line-height: 1.7;"><p style="margin-bottom: 12px;"><b>太棒了！分组已创建成功 🎉</b></p><p style="margin-bottom: 12px;">现在需要添加上游 AI 服务商的账号，让分组能够实际提供服务。</p><div style="padding: 8px 12px; background: #eff6ff; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 13px; margin-bottom: 12px;"><b>🔑 账号的作用：</b><ul style="margin: 8px 0 0 16px;"><li>连接到上游 AI 服务（Claude、GPT 等）</li><li>一个分组可以包含多个账号（负载均衡）</li><li>支持 OAuth 和 Session Key 两种方式</li></ul></div><p style="margin-top: 16px; color: #10b981; font-weight: 600;">👉 点击左侧的"上游管理"</p></div>'
       },
       createAccount: {
         title: '➕ 添加新账号',
@@ -6645,6 +6647,11 @@ export default {
       scanWxpayHint: '请使用手机打开微信，扫描二维码完成支付',
       payInNewWindow: '请在新窗口中完成支付',
       payInNewWindowHint: '支付页面已在新窗口打开，请在新窗口中完成支付后返回此页面',
+      confirmAfterPaymentHint: '充值完成后，根据您的情况点击下面按钮。',
+      paymentSucceeded: '充值成功',
+      paymentFailed: '充值失败',
+      verifyingPayment: '正在确认...',
+      paymentNotConfirmed: '暂未查询到支付成功，请稍后再试',
       openPayWindow: '重新打开支付页面',
       expiresIn: '剩余支付时间',
       expired: '订单已过期',
